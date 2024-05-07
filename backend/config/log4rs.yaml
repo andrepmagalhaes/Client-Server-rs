@@ -1,0 +1,15 @@
+appenders:
+  console:
+    kind: console
+    encoder:
+      pattern: "{d} [{t}] {h({l})} {m}{n}"
+  file:
+    kind: file
+    path: "logs/app.log"
+    encoder:
+      pattern: "{d} [{t}] {h({l})} {m}{n}"
+root:
+  level: info
+  appenders:
+    - console
+    - file
