@@ -1,7 +1,10 @@
 use gdk;
-use glib::wrapper;
+use gdk::glib::Type;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Box, Button, Entry, Grid, Label, Orientation};
+use gtk::{
+    Adjustment, Application, ApplicationWindow, Box, Button, CellRendererText, Entry, Grid, Label,
+    ListStore, Orientation, ScrolledWindow, TreeView, TreeViewColumn, Window, WindowType,
+};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str::from_utf8;
@@ -19,7 +22,7 @@ struct ResponseInterval {
 
 fn pi_calc(interval: &Vec<i32>) -> f64 {
     let mut pi = 0.0;
-    for i in interval[0]..interval[1] {
+    for i in interval[0]..=interval[1] {
         let upper = -1.0_f64.powi(i);
         let lower = 2.0 * i as f64 + 1.0;
 
@@ -90,6 +93,41 @@ fn send_request(address: &str, message: &str, num_calls: i32) -> Vec<ResponseInt
     results
 }
 
+fn create_and_fill_model(results: &[ResponseInterval]) -> ListStore {
+    let store = ListStore::new(&[
+        Type::I32,
+        Type::STRING,
+        Type::STRING,
+        Type::STRING,
+        Type::STRING,
+        Type::STRING,
+        Type::F64,
+    ]);
+
+    for result in results {
+        let iter = store.append();
+        store.set_value(&iter, 0, &result.id.to_value());
+        store.set_value(&iter, 1, &format!("{:?}", result.interval).to_value());
+        store.set_value(&iter, 2, &result.sent_time.to_value());
+        store.set_value(&iter, 3, &result.recieved_time.to_value());
+        store.set_value(&iter, 4, &result.server_recieved_time.to_value());
+        store.set_value(&iter, 5, &result.server_response_time.to_value());
+        store.set_value(&iter, 6, &result.pi_result.to_value());
+    }
+
+    store
+}
+
+fn append_text_column(tree: &TreeView, title: &str, id: i32) {
+    let column = TreeViewColumn::new();
+    let cell = CellRendererText::new();
+
+    CellLayoutExt::pack_start(&column, &cell, true);
+    CellLayoutExt::add_attribute(&column, &cell, "text", id);
+    column.set_title(title);
+    tree.append_column(&column);
+}
+
 fn main() {
     let app = Application::builder()
         .application_id("cliente.servidor.multithread")
@@ -99,7 +137,7 @@ fn main() {
         let win = ApplicationWindow::builder()
             .application(app)
             .default_width(320)
-            .default_height(200)
+            .default_height(150)
             .title("Cliente-Servidor Multithread")
             .build();
 
@@ -123,7 +161,28 @@ fn main() {
             let text = buffer.text();
             if let Ok(number) = text.parse::<i32>() {
                 println!("Number entered: {}", number);
-                send_request("127.0.0.1:7878", "interval", number);
+                let results = send_request("127.0.0.1:7878", "interval", number);
+                let model = create_and_fill_model(&results);
+                let tree = TreeView::with_model(&model);
+
+                append_text_column(&tree, "ID", 0);
+                append_text_column(&tree, "Interval", 1);
+                append_text_column(&tree, "Sent Time", 2);
+                append_text_column(&tree, "Received Time", 3);
+                append_text_column(&tree, "Server Received Time", 4);
+                append_text_column(&tree, "Server Response Time", 5);
+                append_text_column(&tree, "Pi Result", 6);
+
+                let window = Window::new(WindowType::Toplevel);
+                window.set_title("Results");
+                window.set_default_size(800, 600);
+
+                let scroll = ScrolledWindow::new(None::<&Adjustment>, None::<&Adjustment>);
+                scroll.add(&tree);
+
+                window.add(&scroll);
+                window.show_all();
+
                 // Call your function here
             } else {
                 println!("Not a valid number");
