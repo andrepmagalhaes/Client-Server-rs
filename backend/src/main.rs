@@ -81,9 +81,15 @@ fn generate_interval() -> Vec<i32> {
 
     return interval;
 }
+// request format
+// interval => id,interval
+// result => id,result,pi_calc
 
-fn handle_client(mut stream: TcpStream) {
-    let mut buffer = [0; 32];
+// response format
+// interval => id,[interval],server_recieved_time,server_sent_time
+// result => id,server_recieved_time,server_sent_time
+fn handle_client(mut stream: TcpStream, recieved_time: String) {
+    let mut buffer = [0; 256];
     match stream.read(&mut buffer) {
         Ok(_) => {
             let buffer_str = match std::str::from_utf8(&buffer) {
@@ -99,23 +105,27 @@ fn handle_client(mut stream: TcpStream) {
             let request_to_vec = buffer_str.split(',').collect::<Vec<&str>>();
             log::info!("Request: {:?}", request_to_vec);
 
-            if request_to_vec.len() <= 0 {
+            if request_to_vec.len() <= 1 {
                 let error_message = "Invalid request format";
                 log::error!("{}", error_message);
                 handle_response(stream, error_message.as_bytes());
                 return;
             }
 
-            match request_to_vec[0] {
+            match request_to_vec[1] {
                 "interval" => {
                     let interval = generate_interval();
-                    let response = format!("{:?}", interval);
+                    let sent_time = chrono::Local::now().to_string();
+                    let response = format!(
+                        "{}|{:?}|{}|{}",
+                        request_to_vec[0], interval, recieved_time, sent_time
+                    );
                     log::info!("Sending response: {}", response);
                     handle_response(stream, response.as_bytes());
                 }
                 "result" => {
-                    let response = request_to_vec[1];
-                    handle_response(stream, response.as_bytes());
+                    log::info!("{}: {}", request_to_vec[0], request_to_vec[2]);
+                    handle_response(stream, "".as_bytes());
                 }
                 _ => {
                     let error_message = "Invalid request type";
@@ -140,6 +150,7 @@ fn main() {
     let pool = ThreadPool::new(4); // Set the number of threads here
 
     for stream in listener.incoming() {
+        let recieved_time = chrono::Local::now().to_string();
         match stream {
             Ok(stream) => {
                 log::info!(
@@ -152,7 +163,7 @@ fn main() {
                         );
                     }),
                 );
-                pool.execute(|| handle_client(stream));
+                pool.execute(|| handle_client(stream, recieved_time));
             }
             Err(e) => {
                 log::error!("Unable to connect: {}", e);

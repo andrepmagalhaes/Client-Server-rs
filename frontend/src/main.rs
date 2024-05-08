@@ -1,360 +1,141 @@
-use yew::prelude::*;
+use gdk;
+use glib::wrapper;
+use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, Box, Button, Entry, Grid, Label, Orientation};
+use std::io::{Read, Write};
+use std::net::TcpStream;
+use std::str::from_utf8;
 
-use yew_bootstrap::component::*;
-use yew_bootstrap::icons::*;
-use yew_bootstrap::util::*;
+#[derive(Debug)]
+struct ResponseInterval {
+    id: i32,
+    interval: Vec<i32>,
+    sent_time: String,
+    recieved_time: String,
+    server_recieved_time: String,
+    server_response_time: String,
+    pi_result: f64,
+}
 
-struct App;
+fn pi_calc(interval: &Vec<i32>) -> f64 {
+    let mut pi = 0.0;
+    for i in interval[0]..interval[1] {
+        let upper = -1.0_f64.powi(i);
+        let lower = 2.0 * i as f64 + 1.0;
 
-impl Component for App {
-    type Message = ();
-    type Properties = ();
-
-    fn create(_ctx: &Context<Self>) -> Self {
-        App
+        pi += upper / lower;
     }
+    return pi * 4.0;
+}
 
-    // fn update(&mut self, _: Self::Message) -> ShouldRender {
-    //     unimplemented!()
-    // }
+fn send_request(address: &str, message: &str, num_calls: i32) -> Vec<ResponseInterval> {
+    let mut results = Vec::new();
 
-    fn view(&self, _ctx: &Context<Self>) -> Html {
-        let brand = BrandType::BrandIcon {
-            text: AttrValue::from("Yew Bootstrap"),
-            url: Some(AttrValue::from("https://yew.rs")),
-            icon: BI::ROCKET,
-        };
+    for i in 0..=num_calls {
+        match TcpStream::connect(address) {
+            Ok(mut stream) => {
+                println!("Successfully connected to server");
 
-        html! {
-            <>
-                {include_inline()}
-                {BIFiles::cdn()}
-                <NavBar nav_id={"test-nav"} class="navbar-expand-lg navbar-light bg-light" brand={brand}>
-                    <NavItem text="link 1" />
-                    <NavItem text="link 2" />
-                    <NavDropdown text="several items">
-                        <NavDropdownItem text="hello 1" />
-                        <NavDropdownItem text="hello 2" />
-                    </NavDropdown>
-                </NavBar>
-                <Modal id="ExampleModal">
-                    <ModalHeader title="Modal title" id="ExampleModal" />
-                    <ModalBody>
-                        <p>{"Modal body text goes here."}</p>
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button class="btn-secondary" modal_dismiss={true}>{"Close"}</Button>
-                        <Button class="btn-primary">{"Save changes"}</Button>
-                    </ModalFooter>
-                </Modal>
-                <div id="layout" class="p-3">
-                    <h1>{ "Accordian" }</h1>
-                    <Accordion>
-                        <AccordionItem title={"Heading 1"}>
-                            <p>{"Some text inside "}<strong>{"THE BODY"}</strong>{" of the accordion item"}</p>
-                        </AccordionItem>
-                        <AccordionItem title={"Heading 2"}>
-                            <h3>{"Some other text under another accordion"}</h3>
-                            <button>{"Button with some functionality"}</button>
-                        </AccordionItem>
-                    </Accordion>
-                    <h1>{ "Containers" }</h1>
-                    <Container class="bg-primary">{"Normal"}</Container>
-                    <Container class="bg-secondary" fluid={true}>{"Fluid"}</Container>
-                    <Container class="bg-success" size={ContainerSize::Small}>{"Small"}</Container>
-                    <Container class="bg-danger" size={ContainerSize::Medium}>{"Medium"}</Container>
-                    <Container class="bg-warning" size={ContainerSize::Large}>{"Large"}</Container>
-                    <Container class="bg-info" size={ContainerSize::ExtraLarge}>{"Extra Large"}</Container>
-                    <Container class="bg-light" size={ContainerSize::ExtraExtraLarge}>{"Extra Large"}</Container>
+                let m = format!("{},{}", i, message);
+                let msg = m.as_bytes();
 
-                    <h1>{ "Grid" }</h1>
-                    <Row>
-                        <Column class="bg-info">
-                            {"1 of 2"}
-                        </Column>
-                        <Column class="bg-primary">
-                            {"2 of 2"}
-                        </Column>
-                    </Row>
-                    <Row>
-                        <Column class="bg-danger">
-                            {"1 of 3"}
-                        </Column>
-                        <Column class="bg-warning">
-                            {"2 of 3"}
-                        </Column>
-                        <Column class="bg-success">
-                            {"3 of 3"}
-                        </Column>
-                    </Row>
-                    <Row>
-                        <Column class="bg-info">
-                            {"1 of 3"}
-                        </Column>
-                        <Column size={6} class="bg-secondary">
-                            {"2 of 3 (wider)"}
-                        </Column>
-                        <Column class="bg-primary">
-                            {"3 of 3"}
-                        </Column>
-                    </Row>
-                    <Row>
-                        <Column class="bg-danger">
-                            {"1 of 3"}
-                        </Column>
-                        <Column size={5} class="bg-secondary">
-                            {"2 of 3 (wider)"}
-                        </Column>
-                        <Column class="bg-success">
-                            {"3 of 3"}
-                        </Column>
-                    </Row>
-                    <Row>
-                        <Column size={None} md={5} class="bg-info">
-                            {"md-only"}
-                        </Column>
-                    </Row>
-                </div>
-                <div id="components" class="p-3">
-                    <h1>{ "Alerts" }</h1>
-                    <Alert style={Color::Primary}>
-                        { "This is a primary alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Secondary}>
-                        { "This is a secondary alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Success}>
-                        { "This is a success alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Danger}>
-                        { "This is a danger alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Warning}>
-                        { "This is a warning alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Info}>
-                        { "This is a info alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Light}>
-                        { "This is a light alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Dark}>
-                        { "This is a dark alert—check it out!" }
-                    </Alert>
-                    <Alert style={Color::Link}>
-                        { "This is a link alert—check it out!" }
-                    </Alert>
+                // send message
+                stream.write(msg).unwrap();
+                let sent_time = chrono::Local::now().to_string();
+                println!("Sent message, awaiting reply...");
 
-                    <h1>{ "Badges" }</h1>
-                    <Badge style={Color::Primary}>{"Primary"}</Badge>
-                    <Badge style={Color::Secondary}>{"Secondary"}</Badge>
-                    <Badge style={Color::Success}>{"Success"}</Badge>
-                    <Badge style={Color::Danger}>{"Danger"}</Badge>
-                    <Badge style={Color::Warning}>{"Warning"}</Badge>
-                    <Badge style={Color::Info}>{"Info"}</Badge>
-                    <Badge style={Color::Light}>{"Light"}</Badge>
-                    <Badge style={Color::Dark}>{"Dark"}</Badge>
+                let mut data = [0 as u8; 256];
+                match stream.read(&mut data) {
+                    Ok(size) => {
+                        let received_time = chrono::Local::now().to_string();
+                        if let Ok(text) = from_utf8(&data[0..size]) {
+                            let request_to_vec = text.split('|').collect::<Vec<&str>>();
 
-                    <h1>{ "Pill badges" }</h1>
-                    <Badge style={Color::Primary} pill={true}>{"Primary"}</Badge>
-                    <Badge style={Color::Secondary} pill={true}>{"Secondary"}</Badge>
-                    <Badge style={Color::Success} pill={true}>{"Success"}</Badge>
-                    <Badge style={Color::Danger} pill={true}>{"Danger"}</Badge>
-                    <Badge style={Color::Warning} pill={true}>{"Warning"}</Badge>
-                    <Badge style={Color::Info} pill={true}>{"Info"}</Badge>
-                    <Badge style={Color::Light} pill={true}>{"Light"}</Badge>
-                    <Badge style={Color::Dark} pill={true}>{"Dark"}</Badge>
+                            if request_to_vec.len() != 4 {
+                                println!("Invalid response from server");
+                                continue;
+                            }
 
-                    <h1>{ "Positioned badges" }</h1>
-                    <Button style={Color::Primary} class={"position-relative"}>
-                        {"Primary"}
-                        <Badge style={Color::Danger} position={(ArrangeX::Start100, ArrangeY::Top0)}>{"1"}</Badge>
-                    </Button>
-
-                    <h1>{"Border Spinner"}</h1>
-                    <Spinner style={Color::Primary} />
-                    <Spinner style={Color::Secondary} />
-                    <Spinner style={Color::Success} />
-                    <Spinner style={Color::Danger} />
-                    <Spinner style={Color::Warning} />
-                    <Spinner style={Color::Info} />
-                    <Spinner style={Color::Light} />
-                    <Spinner style={Color::Dark} />
-
-                    <h1>{"Growing Spinner"}</h1>
-                    <Spinner style={Color::Primary} grow={true} />
-                    <Spinner style={Color::Secondary} grow={true} />
-                    <Spinner style={Color::Success} grow={true} />
-                    <Spinner style={Color::Danger} grow={true} />
-                    <Spinner style={Color::Warning} grow={true} />
-                    <Spinner style={Color::Info} grow={true} />
-                    <Spinner style={Color::Light} grow={true} />
-                    <Spinner style={Color::Dark} grow={true} />
-
-                    <h1>{"Spinner on Buttons"}</h1>
-                    <Button style={Color::Primary}>
-                        <Spinner style={Color::Light} small={true} />
-                        {"Loading..."}
-                    </Button>
-                    <Button style={Color::Primary}>
-                        <Spinner style={Color::Light} grow={true} small={true} />
-                        {"Loading..."}
-                    </Button>
-
-                    <h1>{"Display headings"}</h1>
-                    <Display size={DisplaySize::One}>{"Display 1"}</Display>
-                    <Display size={DisplaySize::Two}>{"Display 2"}</Display>
-                    <Display size={DisplaySize::Three}>{"Display 3"}</Display>
-                    <Display size={DisplaySize::Four}>{"Display 4"}</Display>
-                    <Display size={DisplaySize::Five}>{"Display 5"}</Display>
-                    <Display size={DisplaySize::Six}>{"Display 6"}</Display>
-
-                    <h1>{"Lead paragraph"}</h1>
-                    <Lead>
-                        {"This is a lead paragraph. It stands out from regular paragraphs."}
-                    </Lead>
-
-                    <h1>{"Modals"}</h1>
-                    <Button style={Color::Primary} modal_target={"ExampleModal"}>{"Open Modal"}</Button>
-
-                    <h1>{"Buttons"}</h1>
-                    <Button style={Color::Primary}>{"Primary"}</Button>
-                    <Button style={Color::Secondary}>{"Secondary"}</Button>
-                    <Button style={Color::Success}>{"Success"}</Button>
-                    <Button style={Color::Danger}>{"Danger"}</Button>
-                    <Button style={Color::Warning}>{"Warning"}</Button>
-                    <Button style={Color::Info}>{"Info"}</Button>
-                    <Button style={Color::Light}>{"Light"}</Button>
-                    <Button style={Color::Dark}>{"Dark"}</Button>
-                    <Button style={Color::Link}>{"Link"}</Button>
-
-                    <h2>{"Outline buttons"}</h2>
-                    <Button style={Color::Primary} outline={true}>{"Primary"}</Button>
-                    <Button style={Color::Secondary} outline={true}>{"Secondary"}</Button>
-                    <Button style={Color::Success} outline={true}>{"Success"}</Button>
-                    <Button style={Color::Danger} outline={true}>{"Danger"}</Button>
-                    <Button style={Color::Warning} outline={true}>{"Warning"}</Button>
-                    <Button style={Color::Info} outline={true}>{"Info"}</Button>
-                    <Button style={Color::Light} outline={true}>{"Light"}</Button>
-                    <Button style={Color::Dark} outline={true}>{"Dark"}</Button>
-                    <Button style={Color::Link} outline={true} text="Link2" />
-
-                    <h2>{"Sizes"}</h2>
-                    <Button style={Color::Primary} size={ButtonSize::Large}>{"Large button"}</Button>
-                    <Button style={Color::Secondary} size={ButtonSize::Large}>{"Large button"}</Button>
-                    <br />
-                    <Button style={Color::Primary} size={ButtonSize::Normal}>{"Normal button"}</Button>
-                    <Button style={Color::Secondary} size={ButtonSize::Normal}>{"Normal button"}</Button>
-                    <br />
-                    <Button style={Color::Primary} size={ButtonSize::Small}>{"Small button"}</Button>
-                    <Button style={Color::Secondary} size={ButtonSize::Small}>{"Small button"}</Button>
-
-                    <h2>{"Disabled state"}</h2>
-                    <Button style={Color::Primary} disabled={true}>{"Primary"}</Button>
-                    <Button style={Color::Secondary} disabled={true}>{"Secondary"}</Button>
-
-                    <h2>{"Links which look like buttons"}</h2>
-                    <Button style={Color::Primary} target={"_blank"} url={"https://github.com/isosphere/yew-bootstrap/"}>{"Primary link"}</Button>
-                    <Button style={Color::Secondary} target={"_blank"} url={"https://github.com/isosphere/yew-bootstrap/"}>{"Secondary link"}</Button>
-                    <Button style={Color::Primary} disabled={true} target={"_blank"} url={"https://github.com/isosphere/yew-bootstrap/"}>{"Disabled link"}</Button>
-
-                    <h2>{"Block buttons"}</h2>
-                    <div class="d-grid gap-2">
-                        <Button style={Color::Primary} block={true}>{"Primary"}</Button>
-                        <Button style={Color::Secondary} block={true}>{"Secondary"}</Button>
-                    </div>
-
-                    <h1>{"Button groups"}</h1>
-                    <ButtonGroup>
-                        <Button style={Color::Primary}>{"Primary"}</Button>
-                        <Button style={Color::Secondary}>{"Secondary"}</Button>
-                    </ButtonGroup>
-
-                    <h2>{"Vertical variation"}</h2>
-                    <ButtonGroup vertical={true}>
-                        <Button style={Color::Primary}>{"Primary"}</Button>
-                        <Button style={Color::Secondary}>{"Secondary"}</Button>
-                    </ButtonGroup>
-
-                    <h1>{"Links"}</h1>
-                    <div class="d-grid gap-2">
-                        <Link text={"Primary link"} style={Color::Primary} url={"https://github.com/isosphere/yew-bootstrap/"} />
-                        <Link text={"Secondary link"} style={Color::Secondary} url={"https://github.com/isosphere/yew-bootstrap/"} />
-                    </div>
-
-                    <h1>{"List groups"}</h1>
-                    <ListGroup>
-                        <ListGroupItem>{"A"}</ListGroupItem>
-                        <ListGroupItem active=true>{"B"}</ListGroupItem>
-                        <ListGroupItem disabled=true>{"C"}</ListGroupItem>
-                    </ListGroup>
-
-                    <h2>{"Flush and with numbers"}</h2>
-                    <ListGroup variant={ListGroupVariant::Flush} numbered=true>
-                        <ListGroupItem style={Color::Primary}>{"Primary"}</ListGroupItem>
-                        <ListGroupItem action=true style={Color::Secondary} url="#ref">{"Secondary w/ link"}</ListGroupItem>
-                        <ListGroupItem action=true style={Color::Info}>{"Secondary w/ action"}</ListGroupItem>
-                    </ListGroup>
-
-                    <h2>{"Horizontal"}</h2>
-                    <ListGroup horizontal={SizeTrigger::Always}>
-                        <ListGroupItem action=true active=true>{"Active action"}</ListGroupItem>
-                        <ListGroupItem action=true disabled=true>{"Disabled action"}</ListGroupItem>
-                    </ListGroup>
-
-                    <h1>{"Progress bars"}</h1>
-                    <h2>{"Simple"}</h2>
-                    <Progress class={"mb-3"}><ProgressBar value=0   /></Progress>
-                    <Progress class={"mb-3"}><ProgressBar value=25  /></Progress>
-                    <Progress class={"mb-3"}><ProgressBar value=50  /></Progress>
-                    <Progress class={"mb-3"}><ProgressBar value=75  /></Progress>
-                    <Progress class={"mb-3"}><ProgressBar value=100 /></Progress>
-
-                    <h2>{"Labels"}</h2>
-                    <Progress class={"mb-3"}><ProgressBar value=25 label={"25%"}/></Progress>
-
-                    <h2>{"Height"}</h2>
-                    <Progress class={"mb-3"} height=1><ProgressBar  value=25/></Progress>
-                    <Progress class={"mb-3"} height=20><ProgressBar value=25/></Progress>
-
-                    <h2>{"Backgrounds"}</h2>
-                    <Progress class={"mb-3"}><ProgressBar value=25  style={Some(Color::Success)}/></Progress>
-                    <Progress class={"mb-3"}><ProgressBar value=50  style={Some(Color::Info)}/></Progress>
-                    <Progress class={"mb-3"}><ProgressBar value=75  style={Some(Color::Warning)}/></Progress>
-                    <Progress class={"mb-3"}><ProgressBar value=100 style={Some(Color::Danger)}/></Progress>
-
-                    <h2>{"Multiple bars"}</h2>
-                    <Progress class={"mb-3"}>
-                        <ProgressBar value=15/>
-                        <ProgressBar value=30 style={Some(Color::Success)}/>
-                        <ProgressBar value=20 style={Some(Color::Info)}/>
-                    </Progress>
-
-                    <h2>{"Striped"}</h2>
-                    <Progress class={"mb-3"}><ProgressBar value=25 striped={true}/></Progress>
-
-                    <h2>{"Animated"}</h2>
-                    <Progress class={"mb-3"}><ProgressBar value=25 animated={true}/></Progress>
-                </div>
-                <div id="helpers" class="p-3">
-                    <h1>{"Vertical/Horizontal rule"}</h1>
-                    <h2>{"Horizontal"}</h2>
-                    <Line />
-                    <Line style={Color::Primary} />
-                    <Line height={Size::Px(5)} />
-                    <Line width={Size::Px(100)} />
-                    <h2>{"Vertical"}</h2>
-                    <Line vertical={true} /><br />
-                    <Line vertical={true} style={Color::Primary} /><br />
-                    <Line vertical={true} height={Size::Px(50)} /><br />
-                    <Line vertical={true} width={Size::Px(100)} /><br />
-                </div>
-                { include_cdn_js() }
-            </>
+                            let interval_vec: Vec<i32> = request_to_vec[1]
+                                .trim_start_matches('[')
+                                .trim_end_matches(']')
+                                .split(',')
+                                .map(|s| s.trim().parse().unwrap())
+                                .collect();
+                            let pi_result = pi_calc(&interval_vec);
+                            results.push(ResponseInterval {
+                                id: request_to_vec[0].parse::<i32>().unwrap(),
+                                interval: interval_vec,
+                                sent_time: sent_time,
+                                recieved_time: received_time,
+                                server_recieved_time: request_to_vec[2].to_string(),
+                                server_response_time: request_to_vec[3].to_string(),
+                                pi_result: pi_result,
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to receive data: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to connect: {}", e);
+            }
         }
     }
+
+    println!("Results: {:?}", results);
+
+    results
 }
 
 fn main() {
-    yew::Renderer::<App>::new().render();
+    let app = Application::builder()
+        .application_id("cliente.servidor.multithread")
+        .build();
+
+    app.connect_activate(|app| {
+        let win = ApplicationWindow::builder()
+            .application(app)
+            .default_width(320)
+            .default_height(200)
+            .title("Cliente-Servidor Multithread")
+            .build();
+
+        let vbox = Box::new(Orientation::Vertical, 0);
+        let hbox = Box::new(Orientation::Horizontal, 0);
+        vbox.pack_start(&hbox, true, true, 0);
+
+        let grid = Grid::new();
+        grid.set_row_spacing(5);
+        grid.set_column_spacing(5);
+        hbox.pack_start(&grid, true, false, 0);
+
+        let label = Label::new(Some("Digite o número de requisições:"));
+        let input = Entry::new();
+        grid.attach(&label, 0, 0, 2, 1);
+        grid.attach(&input, 0, 1, 1, 1);
+
+        let submit_button = Button::with_label("Submit");
+        submit_button.connect_clicked(move |_| {
+            let buffer = input.buffer();
+            let text = buffer.text();
+            if let Ok(number) = text.parse::<i32>() {
+                println!("Number entered: {}", number);
+                send_request("127.0.0.1:7878", "interval", number);
+                // Call your function here
+            } else {
+                println!("Not a valid number");
+            }
+        });
+        grid.set_margin_top(24);
+        grid.attach(&submit_button, 1, 1, 1, 1);
+
+        win.add(&vbox);
+
+        win.show_all();
+    });
+
+    app.run();
 }
